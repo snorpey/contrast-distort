@@ -1,7 +1,7 @@
 /*global define*/
 define(
-	[ 'aux/canvas', 'aux/greyscale', 'aux/bresenham', 'aux/blend-rgba' ],
-	function( canvas_helper, greyscale, bresenham, blendRGBA )
+	[ 'aux/canvas', 'aux/greyscale', 'aux/average-rgba', 'aux/blend-rgba' ],
+	function( canvas_helper, greyscale, averageRGBA, blendRGBA )
 	{
 		var canvas = document.createElement( 'canvas' );
 		var ctx = canvas.getContext( '2d' );
@@ -9,179 +9,106 @@ define(
 		var tmp_canvas = document.createElement( 'canvas' );
 		var tmp_ctx = tmp_canvas.getContext( '2d' );
 
-		var canvas_size = { width: 10, height: 10 };
-
 		var amount;
+		var grid_size;
 
-		var i;
-		var j;
-		var len;
-		var len_2;
-
-		var greyscale_image_data;
-		var res_image_data;
-		var tmp_image_data;
+		var i, j;
+		var len, len_2;
 
 		function applyFilter( image_data, input, callback )
 		{
 			amount = input.amount;
+			grid_size = input.grid_size;
 
 			canvas_helper.resize( canvas, image_data );
 			canvas_helper.resize( tmp_canvas, image_data );
 
-			drawBackground( tmp_canvas, tmp_ctx, '#fffff' );
+			ctx.putImageData( image_data, 0, 0 );
 
-			tmp_ctx = tmp_canvas.getContext( '2d' );
-			tmp_image_data = tmp_ctx.getImageData( 0, 0, tmp_canvas.width, tmp_canvas.height );
-
-			greyscale_image_data = greyscale( image_data );
-			res_image_data = process( image_data, greyscale_image_data, tmp_image_data, amount );
+			var res_image_data = process( image_data, amount );
 
 			callback( res_image_data );
 		}
 
-		function process( image_data, greyscale_image_data, tmp_image_data, amount )
+		function process( image_data, amount )
 		{
-			// for every px
-			// calculate weight ( = greyscale 0 - 255)
-			// calculate force
-			var pixels = [ ];
-			var pixel_index = 0;
+			var width = image_data.width;
+			var height = image_data.height;
+			var grid_points = getGridPoints( image_data, grid_size, grid_size );
+			var tiled_image_data = getTiledImageData( image_data, grid_points, grid_size, grid_size );
 
-			var trails = [ ];
+			return tiled_image_data;
+		}
 
-			var gravity = amount * 5;
-			var gravity_direction = { x: 0, y: 1 };
-			var gravity_amount;
+		function getGridPoints( image_data, tile_width, tile_height )
+		{
+			var grid_points = [ ];
+			var index = 0;
+			var x = 0;
+			var y = 0;
+			var width = image_data.width;
+			var height = image_data.height;
 
-			var trail_pixels;
-			var trail_alpha;
-			var trail_x;
-			var trail_y;
-			var trail_index;
-			var trail_color_1;
-
-			var src_index;
-
-			console.log( amount );
-
-			len = image_data.data.length;
-
-			for ( i = 0; i < len; i += 4 )
+			for ( x = 0; x < height; x += tile_height )
 			{
-				// gravity = greyscale * gravity
-				gravity_amount = parseInt( ( ( 255 - greyscale_image_data.data[i] ) / 255 ) * gravity, 10 );
-
-				pixels[pixel_index] = {
-					pos: {
-						x: ( i / 4 ) % image_data.width,
-						y: Math.floor( ( i / 4 ) / image_data.width )
-					},
-					gravity: {
-						x: gravity_direction.x * gravity_amount,
-						y: gravity_direction.y * gravity_amount
-					},
-					color: [
-						image_data.data[i],
-						image_data.data[i + 1],
-						image_data.data[i + 2],
-						image_data.data[i + 3]
-					]
-				};
-
-				pixels[pixel_index].target = {
-					x: pixels[pixel_index].pos.x + pixels[pixel_index].gravity.x,
-					y: pixels[pixel_index].pos.y + pixels[pixel_index].gravity.y
-				};
-
-				pixels[pixel_index].pos_index = i;
-				pixels[pixel_index].target_index = ( image_data.width * pixels[pixel_index].target.y + pixels[pixel_index].target.x ) * 4;
-
-				// get all pixels bewteen the start and the end point
-				trail_pixels = bresenham( pixels[pixel_index].pos, pixels[pixel_index].target, 20 );
-
-				len_2 = trail_pixels.length;
-
-				for ( j = 0; j < len_2; j++ )
+				for ( y = 0; y < width; y += tile_width )
 				{
-					trail_x = trail_pixels[j].x;
-					trail_y = trail_pixels[j].y;
-
-					// ROWS
-					if ( ! trails[trail_y] )
+					if (
+						x + tile_width < width &&
+						y + tile_height < height
+					)
 					{
-						trails[trail_y] = [ ];
+						grid_points[index] = {
+							x          : x,
+							y          : y,
+							data_index : ( x * width + y ) * 4
+						};
+
+						index++;
 					}
-
-					// COLUMNS
-					if ( ! trails[trail_y][trail_x] )
-					{
-						trails[trail_y][trail_x] = [ 255, 255, 255, 1 ];
-					}
-
-					trail_alpha = j / len_2;
-					trail_color_1 = [ image_data.data[i], image_data.data[i + 1], image_data.data[i + 2], trail_alpha ];
-
-					trails[trail_y][trail_x] = blendRGBA( trail_color_1, trails[trail_y][trail_x] );
 				}
-
-				pixel_index++;
 			}
 
-			len = trails.length;
+			return grid_points;
+		}
 
-			console.log( 'TWO', trails );
+		function getTiledImageData( image_data, grid_points, tile_width, tile_height )
+		{
+			var tile_image_data;
+			var average_color;
+			var fs;
+			var tile_data = { };
+			var key;
+
+			len = grid_points.length;
 
 			for ( i = 0; i < len; i++ )
 			{
-				len_2 = trails[i].length;
+				tile_image_data = ctx.getImageData( grid_points[i].x, grid_points[i].y, tile_width, tile_height );
+				average_color = averageRGBA( tile_image_data, 30 );
+				fs = 'rgba(' + average_color.join( ', ' ) + ')';
 
-				for ( j = 0; j < len_2; j++ )
+				// order by color for fewer canvas state changes / faster drawing...
+				if ( ! tile_data[fs] )
 				{
-					trail_index = ( image_data.width * i + j ) * 4;
-
-					if ( trail_index < tmp_image_data.data.length )
-					{
-						try {
-							tmp_image_data.data[trail_index]     = trails[i][j][0];
-							tmp_image_data.data[trail_index + 1] = trails[i][j][1];
-							tmp_image_data.data[trail_index + 2] = trails[i][j][2];
-							tmp_image_data.data[trail_index + 3] = trails[i][j][3];
-						}
-
-						catch( e )
-						{
-							console.log( '#', trails, i, j, trails[i][j] );
-							throw e;
-						}
-					}
+					tile_data[fs] = [ ];
 				}
+
+				tile_data[fs].push( grid_points[i] );
 			}
 
-			len = pixels.length;
-
-			//console.log( 'THREE', pixels );
-
-			for ( i = 0; i < len; i++ )
+			for ( key in tile_data )
 			{
-				if ( pixels[i].target_index < tmp_image_data.data.length )
-				{
-					try {
-						tmp_image_data.data[pixels[i].target_index]     = pixels[i].color[0];
-						tmp_image_data.data[pixels[i].target_index + 1] = pixels[i].color[1];
-						tmp_image_data.data[pixels[i].target_index + 2] = pixels[i].color[2];
-						tmp_image_data.data[pixels[i].target_index + 3] = pixels[i].color[3];
-					}
+				len = tile_data[key].length;
 
-					catch( e )
-					{
-						console.log( '##', i, pixels[i], tmp_image_data.data[pixels[i].target_index] );
-						throw e;
-					}
+				for ( i = 0; i < len; i++ )
+				{
+					tmp_ctx.fillStyle = key;
+					tmp_ctx.fillRect( tile_data[key][i].x, tile_data[key][i].y, tile_width, tile_height );
 				}
 			}
 
-			return tmp_image_data;
+			return tmp_ctx.getImageData( 0, 0, image_data.width, image_data.height );
 		}
 
 		function drawBackground( canvas, ctx, color )
