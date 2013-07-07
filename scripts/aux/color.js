@@ -46,7 +46,7 @@ define(
 			var pixels = [ ];
 			var pixel_index = 0;
 			var gravity = amount;
-			var gravity_direction = { x: 0, y: 1 };
+			var gravity_direction = { x: 1, y: 0 };
 			var gravity_amount;
 
 			console.log( amount );
