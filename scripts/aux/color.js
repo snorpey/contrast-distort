@@ -39,25 +39,30 @@ define(
 			var grid_points = getGridPoints( image_data, grid_size, grid_size );
 			var distorted_points = getDistortedPoints( grid_points, grid_size, grid_size );
 
-			var p_1, p_2, p_3, p_4;
+			var p1, p2, p3, p4;
 
 			canvas_helper.clear( tmp_canvas, tmp_ctx );
 			tmp_ctx.beginPath();
 
 			for ( i = 0; i < distorted_points.length; i++ )
 			{
-				p_1 = distorted_points[i];
-				p_2 = getItemByValue( distorted_points, 'row', p_1.row,     'column', p_1.column + 1 );
-				p_3 = getItemByValue( distorted_points, 'row', p_1.row + 1, 'column', p_1.column + 1 );
-				p_4 = getItemByValue( distorted_points, 'row', p_1.row + 1, 'column', p_1.column );
+				p1 = distorted_points[i];
+				p2 = getItemByValue( distorted_points, 'row', p1.row,     'column', p1.column + 1 );
+				p3 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column + 1 );
+				p4 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column );
 
-				if ( p_1 && p_2 && p_3 && p_4 )
+				if ( p1 && p2 && p3 && p4 )
 				{
-					tmp_ctx.moveTo( p_1.end_x, p_1.end_y );
-					tmp_ctx.lineTo( p_2.end_x, p_2.end_y );
-					tmp_ctx.lineTo( p_3.end_x, p_3.end_y );
-					tmp_ctx.lineTo( p_4.end_x, p_4.end_y );
-					tmp_ctx.lineTo( p_1.end_x, p_1.end_y );
+					//if ( i === 0 )
+					//{
+						drawCell( tmp_ctx, distorted_points[i].image_data, p1, p2, p3, p4 );
+					//}
+
+					tmp_ctx.moveTo( p1.end_x, p1.end_y );
+					tmp_ctx.lineTo( p2.end_x, p2.end_y );
+					tmp_ctx.lineTo( p3.end_x, p3.end_y );
+					tmp_ctx.lineTo( p4.end_x, p4.end_y );
+					tmp_ctx.lineTo( p1.end_x, p1.end_y );
 				}
 			}
 
@@ -66,6 +71,60 @@ define(
 
 			return tmp_ctx.getImageData( 0, 0, canvas.width, canvas.height );
 		}
+
+		// by @canvastag; http://jsdo.it/canvastag/y56M
+		function drawCell( ctx, image_data, p1, p2, p3, p4 )
+		{
+			var xm = getLinearSolution( 0, 0, p1.end_x, image_data.width, 0, p2.end_x, 0, image_data.height, p3.end_x );
+			var ym = getLinearSolution( 0, 0, p1.end_y, image_data.width, 0, p2.end_y, 0, image_data.height, p3.end_y );
+			var xn = getLinearSolution( image_data.width, image_data.height, p4.end_x, image_data.width, 0, p2.end_x, 0, image_data.height, p3.end_x );
+			var yn = getLinearSolution( image_data.width, image_data.height, p4.enx_y, image_data.width, 0, p2.end_y, 0, image_data.height, p3.end_y );
+
+			ctx.save();
+			ctx.setTransform( xm[0], ym[0], xm[1], ym[1], xm[2], ym[2] );
+			ctx.beginPath();
+			ctx.moveTo( 0, 0 );
+			ctx.lineTo( image_data.width, 0 );
+			ctx.lineTo( 0, image_data.height );
+			ctx.lineTo( 0, 0 );
+			ctx.closePath();
+			ctx.fill();
+			ctx.clip();
+			ctx.putImageData( image_data, 0, 0 );
+			ctx.restore();
+
+			ctx.save();
+			ctx.setTransform( xn[0], yn[0], xn[1], yn[1], xn[2], yn[2] );
+			ctx.beginPath();
+			ctx.moveTo( image_data.width, image_data.height );
+			ctx.lineTo( image_data.width, 0 );
+			ctx.lineTo( 0, image_data.height );
+			ctx.lineTo( image_data.width, image_data.height );
+			ctx.closePath();
+			ctx.fill();
+			ctx.clip();
+			ctx.putImageData( image_data, 0, 0 );
+			ctx.restore();
+		}
+
+		function getLinearSolution( r1, s1, t1, r2, s2, t2, r3, s3, t3 )
+		{
+			r1 = parseFloat( r1 );
+			s1 = parseFloat( s1 );
+			t1 = parseFloat( t1 );
+			r2 = parseFloat( r2 );
+			s2 = parseFloat( s2 );
+			t2 = parseFloat( t2 );
+			r3 = parseFloat( r3 );
+			s3 = parseFloat( s3 );
+			t3 = parseFloat( t3 );
+
+			var a = (((t2 - t3) * (s1 - s2)) - ((t1 - t2) * (s2 - s3))) / (((r2 - r3) * (s1 - s2)) - ((r1 - r2) * (s2 - s3)));
+			var b = (((t2 - t3) * (r1 - r2)) - ((t1 - t2) * (r2 - r3))) / (((s2 - s3) * (r1 - r2)) - ((s1 - s2) * (r2 - r3)));
+			var c = t1 - ( r1 * a ) - ( s1 * b );
+
+			return [ a, b, c ];
+        }
 
 		function getGridPoints( image_data, tile_width, tile_height )
 		{
