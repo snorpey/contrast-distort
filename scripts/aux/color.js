@@ -17,19 +17,24 @@ define(
 		var i, j;
 		var len, len_2;
 
+		var cell_count = 0;
+		var cells_created = 0;
+
+		var done;
+
+
 		function applyFilter( image_data, input, callback )
 		{
 			amount = input.amount / 100;
 			grid_size = input.grid_size;
+			done = callback;
 
 			canvas_helper.resize( canvas, image_data );
 			canvas_helper.resize( tmp_canvas, image_data );
 
 			ctx.putImageData( image_data, 0, 0 );
 
-			var res_image_data = process( image_data, amount );
-
-			callback( res_image_data );
+			process( image_data, amount );
 		}
 
 		function process( image_data, amount )
@@ -39,60 +44,65 @@ define(
 			var grid_points = getGridPoints( image_data, grid_size, grid_size );
 			var distorted_points = getDistortedPoints( grid_points, grid_size, grid_size );
 
-			var p1, p2, p3, p4;
-
 			canvas_helper.clear( tmp_canvas, tmp_ctx );
-			tmp_ctx.beginPath();
+			canvas_helper.resize( tmp_canvas, { width: grid_size, height: grid_size } );
 
-			for ( i = 0; i < distorted_points.length; i++ )
-			{
-				p1 = distorted_points[i];
-				p2 = getItemByValue( distorted_points, 'row', p1.row,     'column', p1.column + 1 );
-				p3 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column + 1 );
-				p4 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column );
-
-				if ( p1 && p2 && p3 && p4 )
-				{
-					//if ( i === 0 )
-					//{
-						drawCell( tmp_ctx, distorted_points[i].image_data, p1, p2, p3, p4 );
-					//}
-
-					tmp_ctx.moveTo( p1.end_x, p1.end_y );
-					tmp_ctx.lineTo( p2.end_x, p2.end_y );
-					tmp_ctx.lineTo( p3.end_x, p3.end_y );
-					tmp_ctx.lineTo( p4.end_x, p4.end_y );
-					tmp_ctx.lineTo( p1.end_x, p1.end_y );
-				}
-			}
-
-			tmp_ctx.stroke();
-			tmp_ctx.closePath();
-
-			return tmp_ctx.getImageData( 0, 0, canvas.width, canvas.height );
+			distorted_points.forEach( processPoint );
 		}
 
-		// by @canvastag; http://jsdo.it/canvastag/y56M
-		function drawCell( ctx, image_data, p1, p2, p3, p4 )
+		function processPoint( p1, index, distorted_points )
 		{
-			var xm = getLinearSolution( 0, 0, p1.end_x, image_data.width, 0, p2.end_x, 0, image_data.height, p3.end_x );
-			var ym = getLinearSolution( 0, 0, p1.end_y, image_data.width, 0, p2.end_y, 0, image_data.height, p3.end_y );
-			var xn = getLinearSolution( image_data.width, image_data.height, p4.end_x, image_data.width, 0, p2.end_x, 0, image_data.height, p3.end_x );
-			var yn = getLinearSolution( image_data.width, image_data.height, p4.enx_y, image_data.width, 0, p2.end_y, 0, image_data.height, p3.end_y );
+			var p2 = getItemByValue( distorted_points, 'row', p1.row,     'column', p1.column + 1 );
+			var p3 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column + 1 );
+			var p4 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column );
+
+			if ( p1 && p2 && p3 && p4 )
+			{
+				tmp_ctx.putImageData( p1.image_data, 0, 0 );
+
+				var img = new Image();
+
+				img.onload = function()
+				{
+					drawCell( ctx, img, p1, p2, p3, p4 );
+
+					cells_created++;
+
+					if ( cell_count === cells_created )
+					{
+						done( ctx.getImageData( 0, 0, canvas.width, canvas.height ) );
+					}
+				}
+
+				img.src = tmp_canvas.toDataURL( 'image/png' );
+
+				cell_count++;
+			}
+		}
+
+		// by @migurski
+		// http://mike.teczno.com/notes/canvas-warp.html
+		function drawCell( ctx, image, p1, p2, p3, p4 )
+		{
+			var xm = getLinearSolution( 0, 0, p1.end_x, image.width, 0, p2.end_x, 0, image.height, p3.end_x );
+			var ym = getLinearSolution( 0, 0, p1.end_y, image.width, 0, p2.end_y, 0, image.height, p3.end_y );
+			var xn = getLinearSolution( image.width, image.height, p4.end_x, image.width, 0, p2.end_x, 0, image.height, p3.end_x );
+			var yn = getLinearSolution( image.width, image.height, p4.enx_y, image.width, 0, p2.end_y, 0, image.height, p3.end_y );
 
 			ctx.save();
 			ctx.setTransform( xm[0], ym[0], xm[1], ym[1], xm[2], ym[2] );
 			ctx.beginPath();
 			ctx.moveTo( 0, 0 );
-			ctx.lineTo( image_data.width, 0 );
-			ctx.lineTo( 0, image_data.height );
+			ctx.lineTo( image.width, 0 );
+			ctx.lineTo( 0, image.height );
 			ctx.lineTo( 0, 0 );
 			ctx.closePath();
 			ctx.fill();
 			ctx.clip();
-			ctx.putImageData( image_data, 0, 0 );
+			ctx.drawImage( image, 0, 0, image.width, image.height );
 			ctx.restore();
 
+			/*
 			ctx.save();
 			ctx.setTransform( xn[0], yn[0], xn[1], yn[1], xn[2], yn[2] );
 			ctx.beginPath();
@@ -105,6 +115,7 @@ define(
 			ctx.clip();
 			ctx.putImageData( image_data, 0, 0 );
 			ctx.restore();
+			*/
 		}
 
 		function getLinearSolution( r1, s1, t1, r2, s2, t2, r3, s3, t3 )
