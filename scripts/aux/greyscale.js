@@ -2,7 +2,7 @@
 define(
 	function()
 	{
-		function greyscale( image_data )
+		function greyscaleImageData( image_data )
 		{
 			var data = image_data.data;
 			var len  = image_data.data.length;
@@ -21,6 +21,6 @@ define(
 			return image_data;
 		}
 
-		return greyscale;
+		return greyscaleImageData;
 	}
 );
