@@ -9,6 +9,9 @@ define(
 		var tmp_canvas = document.createElement( 'canvas' );
 		var tmp_ctx = tmp_canvas.getContext( '2d' );
 
+		var res_canvas = document.createElement( 'canvas' );
+		var res_ctx = res_canvas.getContext( '2d' );
+
 		var amount;
 		var grid_size;
 
@@ -31,6 +34,7 @@ define(
 
 			canvas_helper.resize( canvas, image_data );
 			canvas_helper.resize( tmp_canvas, image_data );
+			canvas_helper.resize( res_canvas, image_data );
 
 			ctx.putImageData( image_data, 0, 0 );
 
@@ -52,9 +56,9 @@ define(
 
 		function processPoint( p1, index, distorted_points )
 		{
-			var p2 = getItemByValue( distorted_points, 'row', p1.row,     'column', p1.column + 1 );
-			var p3 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column + 1 );
-			var p4 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column );
+			var p2 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column );
+			var p3 = getItemByValue( distorted_points, 'row', p1.row,     'column', p1.column + 1 );
+			var p4 = getItemByValue( distorted_points, 'row', p1.row + 1, 'column', p1.column + 1 );
 
 			if ( p1 && p2 && p3 && p4 )
 			{
@@ -64,13 +68,13 @@ define(
 
 				img.onload = function()
 				{
-					drawCell( ctx, img, p1, p2, p3, p4 );
+					drawCell( res_ctx, img, p1, p2, p3, p4 );
 
 					cells_created++;
 
 					if ( cell_count === cells_created )
 					{
-						done( ctx.getImageData( 0, 0, canvas.width, canvas.height ) );
+						done( res_ctx.getImageData( 0, 0, canvas.width, canvas.height ) );
 					}
 				}
 
@@ -87,7 +91,7 @@ define(
 			var xm = getLinearSolution( 0, 0, p1.end_x, image.width, 0, p2.end_x, 0, image.height, p3.end_x );
 			var ym = getLinearSolution( 0, 0, p1.end_y, image.width, 0, p2.end_y, 0, image.height, p3.end_y );
 			var xn = getLinearSolution( image.width, image.height, p4.end_x, image.width, 0, p2.end_x, 0, image.height, p3.end_x );
-			var yn = getLinearSolution( image.width, image.height, p4.enx_y, image.width, 0, p2.end_y, 0, image.height, p3.end_y );
+			var yn = getLinearSolution( image.width, image.height, p4.end_y, image.width, 0, p2.end_y, 0, image.height, p3.end_y );
 
 			ctx.save();
 			ctx.setTransform( xm[0], ym[0], xm[1], ym[1], xm[2], ym[2] );
@@ -102,20 +106,18 @@ define(
 			ctx.drawImage( image, 0, 0, image.width, image.height );
 			ctx.restore();
 
-			/*
 			ctx.save();
 			ctx.setTransform( xn[0], yn[0], xn[1], yn[1], xn[2], yn[2] );
 			ctx.beginPath();
-			ctx.moveTo( image_data.width, image_data.height );
-			ctx.lineTo( image_data.width, 0 );
-			ctx.lineTo( 0, image_data.height );
-			ctx.lineTo( image_data.width, image_data.height );
+			ctx.moveTo( image.width, image.height );
+			ctx.lineTo( image.width, 0 );
+			ctx.lineTo( 0, image.height );
+			ctx.lineTo( image.width, image.height );
 			ctx.closePath();
 			ctx.fill();
 			ctx.clip();
-			ctx.putImageData( image_data, 0, 0 );
+			ctx.drawImage( image, 0, 0, image.width, image.height );
 			ctx.restore();
-			*/
 		}
 
 		function getLinearSolution( r1, s1, t1, r2, s2, t2, r3, s3, t3 )
@@ -200,14 +202,9 @@ define(
 				bright          = brightness( average_color );
 				distortion      = amount * bright;
 
-				if ( i === 30 )
-				{
-					console.log( average_color, bright, distortion );
-				}
-
 				grid_points[i].image_data = tile_image_data;
-				grid_points[i].end_x = grid_points[i].x + ( direction.x * distortion );
-				grid_points[i].end_y = grid_points[i].y + ( direction.y * distortion );
+				grid_points[i].end_x = parseInt( grid_points[i].x + ( direction.x * distortion ) );
+				grid_points[i].end_y = parseInt( grid_points[i].y + ( direction.y * distortion ) );
 			}
 
 			return grid_points;
