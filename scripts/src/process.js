@@ -1,7 +1,7 @@
 /*global define, requestAnimationFrame*/
 define(
-	[ 'aux/color', 'aux/canvas', 'lib/raf' ],
-	function( color, canvas_helper )
+	[ 'aux/distort', 'aux/canvas', 'lib/raf' ],
+	function( distort, canvas_helper )
 	{
 		var tmp_canvas = document.createElement( 'canvas' );
 		var tmp_ctx = tmp_canvas.getContext( '2d' );
@@ -75,7 +75,7 @@ define(
 
 			image_data = tmp_ctx.getImageData( 0, 0, tmp_canvas.width, tmp_canvas.height );
 
-			color( image_data, values, draw );
+			distort( image_data, values, draw );
 		}
 
 		function draw( image_data )
