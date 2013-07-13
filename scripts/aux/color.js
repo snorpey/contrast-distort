@@ -1,7 +1,7 @@
 /*global define*/
 define(
-	[ 'aux/canvas', 'aux/greyscale', 'aux/brightness', 'aux/imagedata-contrast', 'aux/blend-rgba' ],
-	function( canvas_helper, greyscale, brightness, getImageDataContrast, blendRGBA )
+	[ 'aux/canvas', 'aux/imagedata-contrast' ],
+	function( canvas_helper, getImageDataContrast )
 	{
 		var canvas = document.createElement( 'canvas' );
 		var ctx = canvas.getContext( '2d' );
