@@ -1,7 +1,7 @@
 /*global define, requestAnimationFrame*/
 define(
-	[ 'aux/color', 'aux/canvas', 'lib/raf' ],
-	function( color, canvas_helper )
+	[ 'aux/distort', 'aux/canvas', 'lib/raf' ],
+	function( distort, canvas_helper )
 	{
 		var tmp_canvas = document.createElement( 'canvas' );
 		var tmp_ctx = tmp_canvas.getContext( '2d' );
@@ -68,8 +68,6 @@ define(
 		{
 			is_processing = true;
 
-			canvas_helper.clear( tmp_canvas, tmp_ctx );
-			canvas_helper.clear( canvas, ctx );
 			canvas_helper.resize( tmp_canvas, img );
 			canvas_helper.resize( canvas, img );
 
@@ -77,11 +75,14 @@ define(
 
 			image_data = tmp_ctx.getImageData( 0, 0, tmp_canvas.width, tmp_canvas.height );
 
-			color( image_data, values, draw );
+			distort( image_data, values, draw );
 		}
 
 		function draw( image_data )
 		{
+			ctx.clearRect( 0, 0, canvas.width, canvas.height );
+			tmp_ctx.clearRect( 0, 0, tmp_canvas.width, tmp_canvas.height );
+
 			canvas_helper.resize( canvas, image_data );
 			ctx.putImageData( image_data, 0, 0 );
 
@@ -100,7 +101,18 @@ define(
 
 			for ( var key in new_values )
 			{
-				result[key] = parseInt( new_values[key], 10 );
+				if (
+					key === 'horizontal' ||
+					key === 'vertical'
+				)
+				{
+					result[key] = parseFloat( new_values[key] );
+				}
+
+				else
+				{
+					result[key] = parseInt( new_values[key], 10 );
+				}
 			}
 
 			key = null;
