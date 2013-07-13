@@ -1,7 +1,7 @@
 /*global define*/
 define(
-	[ 'aux/canvas', 'aux/greyscale', 'aux/brightness', 'aux/average-rgba', 'aux/blend-rgba' ],
-	function( canvas_helper, greyscale, brightness, averageRGBA, blendRGBA )
+	[ 'aux/canvas', 'aux/greyscale', 'aux/brightness', 'aux/imagedata-contrast', 'aux/blend-rgba' ],
+	function( canvas_helper, greyscale, brightness, getImageDataContrast, blendRGBA )
 	{
 		var canvas = document.createElement( 'canvas' );
 		var ctx = canvas.getContext( '2d' );
@@ -14,6 +14,7 @@ define(
 
 		var amount;
 		var grid_size;
+		var detail;
 
 		var direction = { x: 0, y: 1 };
 
@@ -28,9 +29,14 @@ define(
 
 		function applyFilter( image_data, input, callback )
 		{
-			amount = input.amount / 100;
+			amount = input.amount;
 			grid_size = input.grid_size;
+			detail = 100 - input.detail;
 			done = callback;
+
+			res_ctx.clearRect( 0, 0, res_canvas.width, res_canvas.height );
+			tmp_ctx.clearRect( 0, 0, tmp_canvas.width, tmp_canvas.height );
+			ctx.clearRect( 0, 0, canvas.width, canvas.height );
 
 			canvas_helper.resize( canvas, image_data );
 			canvas_helper.resize( tmp_canvas, image_data );
@@ -48,7 +54,6 @@ define(
 			var grid_points = getGridPoints( image_data, grid_size, grid_size );
 			var distorted_points = getDistortedPoints( grid_points, grid_size, grid_size );
 
-			canvas_helper.clear( tmp_canvas, tmp_ctx );
 			canvas_helper.resize( tmp_canvas, { width: grid_size, height: grid_size } );
 
 			distorted_points.forEach( processPoint );
@@ -76,7 +81,7 @@ define(
 					{
 						done( res_ctx.getImageData( 0, 0, canvas.width, canvas.height ) );
 					}
-				}
+				};
 
 				img.src = tmp_canvas.toDataURL( 'image/png' );
 
@@ -187,8 +192,7 @@ define(
 		function getDistortedPoints( grid_points, tile_width, tile_height )
 		{
 			var tile_image_data;
-			var average_color;
-			var bright;
+			var cell_contrast;
 			var key;
 			var distortion;
 			var tile_points = [ ];
@@ -198,13 +202,12 @@ define(
 			for ( i = 0; i < len; i++ )
 			{
 				tile_image_data = ctx.getImageData( grid_points[i].x, grid_points[i].y, tile_width, tile_height );
-				average_color   = averageRGBA( tile_image_data, 30 );
-				bright          = brightness( average_color );
-				distortion      = amount * bright;
+				cell_contrast   = getImageDataContrast( tile_image_data, detail );
+				distortion      = amount * cell_contrast;
 
 				grid_points[i].image_data = tile_image_data;
-				grid_points[i].end_x = parseInt( grid_points[i].x + ( direction.x * distortion ) );
-				grid_points[i].end_y = parseInt( grid_points[i].y + ( direction.y * distortion ) );
+				grid_points[i].end_x = parseInt( grid_points[i].x + ( direction.x * distortion ), 10 );
+				grid_points[i].end_y = parseInt( grid_points[i].y + ( direction.y * distortion ), 10 );
 			}
 
 			return grid_points;
