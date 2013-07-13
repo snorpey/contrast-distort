@@ -3,7 +3,7 @@ image distortion experiment
 
 this is an experiment for the web browser. it distorts images by dividing the image into a grid and then distorting it by calculating the contrast in every cell of the grid.
 
-[![distortion experiment screen shot](https://dl.dropboxusercontent.com/u/1098704/Screenshots/github-contrast-distort.png)](http://snorpey.github.io/jpg-glitch/)
+[![distortion experiment screen shot](https://dl.dropboxusercontent.com/u/1098704/Screenshots/github-contrast-distort.png)](http://snorpey.github.io/contrast-distort/)
 
 [online demo](http://snorpey.github.io/contrast-distort/)
 
