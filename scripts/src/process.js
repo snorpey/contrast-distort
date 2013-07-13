@@ -68,8 +68,6 @@ define(
 		{
 			is_processing = true;
 
-			canvas_helper.clear( tmp_canvas, tmp_ctx );
-			canvas_helper.clear( canvas, ctx );
 			canvas_helper.resize( tmp_canvas, img );
 			canvas_helper.resize( canvas, img );
 
@@ -82,6 +80,9 @@ define(
 
 		function draw( image_data )
 		{
+			ctx.clearRect( 0, 0, canvas.width, canvas.height );
+			tmp_ctx.clearRect( 0, 0, tmp_canvas.width, tmp_canvas.height );
+
 			canvas_helper.resize( canvas, image_data );
 			ctx.putImageData( image_data, 0, 0 );
 
@@ -100,7 +101,18 @@ define(
 
 			for ( var key in new_values )
 			{
-				result[key] = parseInt( new_values[key], 10 );
+				if (
+					key === 'horizontal' ||
+					key === 'vertical'
+				)
+				{
+					result[key] = parseFloat( new_values[key] );
+				}
+
+				else
+				{
+					result[key] = parseInt( new_values[key], 10 );
+				}
 			}
 
 			key = null;

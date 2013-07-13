@@ -29,10 +29,12 @@ define(
 
 		function applyFilter( image_data, input, callback )
 		{
-			amount = input.amount;
-			grid_size = input.grid_size;
-			detail = 100 - input.detail;
-			done = callback;
+			amount      = input.amount;
+			grid_size   = input.grid_size;
+			detail      = 100 - input.detail;
+			direction.x = input.horizontal;
+			direction.y = input.vertical;
+			done        = callback;
 
 			res_ctx.clearRect( 0, 0, res_canvas.width, res_canvas.height );
 			tmp_ctx.clearRect( 0, 0, tmp_canvas.width, tmp_canvas.height );
