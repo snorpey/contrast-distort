@@ -18,9 +18,6 @@ define(
 		var i, j;
 		var len, len_2;
 
-		var cell_count = 0;
-		var cells_created = 0;
-
 		var done;
 
 		function applyFilter( image, input, callback )
