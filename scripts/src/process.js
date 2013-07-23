@@ -14,7 +14,6 @@ define(
 		var image;
 		var signals;
 		var image_data;
-		var canvas_size;
 
 		function init( shared )
 		{
@@ -71,11 +70,7 @@ define(
 			canvas_helper.resize( tmp_canvas, img );
 			canvas_helper.resize( canvas, img );
 
-			tmp_ctx.drawImage( img, 0, 0 );
-
-			image_data = tmp_ctx.getImageData( 0, 0, tmp_canvas.width, tmp_canvas.height );
-
-			distort( image_data, values, draw );
+			distort( img, values, draw );
 		}
 
 		function draw( image_data )
