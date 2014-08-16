@@ -123,16 +123,17 @@ define(
 			var index = 0;
 			var x = 0;
 			var y = 0;
-			var width = image.width;
-			var height = image.height;
+			var width = image.width + tile_width;
+			var height = image.height + tile_height;
+
 			var column = 0;
 			var row = 0;
 
-			for ( x = 0; x < height; x += tile_height )
+			for ( x = 0; x < width; x += tile_height )
 			{
 				column = 0;
 
-				for ( y = 0; y < width; y += tile_width )
+				for ( y = 0; y < height; y += tile_width )
 				{
 					if (
 						x + tile_width < width &&
